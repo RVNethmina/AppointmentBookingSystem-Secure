@@ -12,8 +12,13 @@ import { createAuthLimiter, createApiLimiter, AUTH_PATHS } from './middleware/ra
 const createApp = () => {
     const app = express()
 
-    // the API is deployed behind a reverse proxy
-    app.set('trust proxy', 1)
+    // Trust X-Forwarded-For only when a reverse proxy that overwrites it is
+    // configured (TRUST_PROXY = number of proxy hops, e.g. 1). Otherwise the
+    // header is attacker-controlled and would defeat per-IP rate limiting.
+    const trustProxy = process.env.TRUST_PROXY
+    if (trustProxy) {
+        app.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy)
+    }
 
     //middlewares
     app.use(express.json())
