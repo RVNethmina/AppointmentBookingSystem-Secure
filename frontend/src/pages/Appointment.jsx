@@ -113,7 +113,6 @@ const Appoinment = () => {
         }
 
     } catch (error) {
-      console.log(error)
       toast.error(error.message)
     }
   }
@@ -125,10 +124,6 @@ const Appoinment = () => {
   useEffect(() => {
     getAvailableSlots();
   }, [docInfo]);
-
-  useEffect(() => {
-    console.log(docSlots);
-  }, [docSlots]);
 
   return (
     docInfo && (

@@ -14,8 +14,10 @@ const Login = () => {
   const [email,setEmail] = useState('')
   const [password,setPassword] = useState('')
 
-  const {setAtoken,backendUrl} = useContext(AdminContext)
-  const {dToken,setDtoken} = useContext(DoctorContext)
+  // setter names must match the context (setAToken / setDToken), otherwise
+  // a successful login only took effect after a page reload
+  const {setAToken,backendUrl} = useContext(AdminContext)
+  const {setDToken} = useContext(DoctorContext)
 
   const navigate = useNavigate()
 
@@ -33,7 +35,7 @@ const Login = () => {
         if(data.success) {
           navigate('/admin-dashboard')
           localStorage.setItem('aToken',data.token)
-          setAtoken(data.token)
+          setAToken(data.token)
         }
         else{
           toast.error(data.message)
@@ -47,9 +49,7 @@ const Login = () => {
         if(data.success) {
           navigate('/doctor-dashboard')
           localStorage.setItem('dToken',data.token)
-          setDtoken(data.token)
-          console.log(data.token);
-          
+          setDToken(data.token)
         }
         else{
           toast.error(data.message)
@@ -58,7 +58,8 @@ const Login = () => {
       }
 
     } catch (error) {
-      
+      // show rejected logins (401) and rate limiting (429) instead of ignoring them
+      toast.error(error.response?.data?.message || error.message)
     }
   }
 

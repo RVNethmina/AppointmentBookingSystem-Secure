@@ -21,13 +21,11 @@ const DoctorContextProvider = (props) => {
 
             if (data.success) {
                 setAppointments(data.appointments.reverse())
-                console.log(data.appointments);  
             }
             else{
                 toast.error(data.message)
             }
         } catch (error) {
-            console.log(error);
             toast.error(error.message)
         }
 
@@ -50,7 +48,6 @@ const DoctorContextProvider = (props) => {
             }
 
         } catch (error) {
-            console.log(error);
             toast.error(error.message)
         }
 
@@ -72,7 +69,6 @@ const DoctorContextProvider = (props) => {
             }
 
         } catch (error) {
-            console.log(error);
             toast.error(error.message)
         }
 
@@ -87,7 +83,6 @@ const DoctorContextProvider = (props) => {
 
             if (data.success) {
                 setDashData(data.dashData)
-                console.log(data.dashData);
                 
             }
             else{
@@ -95,7 +90,6 @@ const DoctorContextProvider = (props) => {
             }
 
         } catch (error) {
-            console.log(error);
             toast.error(error.message)
         }
 
@@ -110,11 +104,9 @@ const DoctorContextProvider = (props) => {
             
             if(data.success){
                 setProfileData(data.profileData)
-                console.log(data.profileData)
             }
 
         } catch (error) {
-            console.log(error);
             toast.error(error.message)
         }
         

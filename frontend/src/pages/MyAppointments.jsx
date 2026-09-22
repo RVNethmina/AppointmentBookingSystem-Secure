@@ -39,10 +39,8 @@ const MyAppointments = () => {
       if (data.success) {
         //new appointments will be on the top
         setAppointments(data.appointments.reverse());
-        console.log(data.appointments);
       }
     } catch (error) {
-      console.log(error);
       toast.error(error.message);
     }
   };
@@ -62,7 +60,6 @@ const MyAppointments = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      console.log(error);
       toast.error(error.message);
     }
   };

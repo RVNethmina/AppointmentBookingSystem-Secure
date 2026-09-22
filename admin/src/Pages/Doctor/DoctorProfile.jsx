@@ -35,7 +35,6 @@ const DoctorProfile = () => {
     } catch (error) {
       
       toast.error(error.message)
-      console.log(error);
       
 
     }
