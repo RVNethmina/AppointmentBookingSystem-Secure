@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Environment files hold credentials and must never be committed.
+# Only the documented templates (.env.example) are tracked.
+.env
+.env.*
+!.env.example
+
+# Runtime upload directory
+backend/uploads/
+
+# Build output and tooling
+dist/
+coverage/
+*.log
+.DS_Store
