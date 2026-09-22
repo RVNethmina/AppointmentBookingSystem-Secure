@@ -51,8 +51,8 @@ const registerUser = async (req, res) => {
     res.json({ success: true, token });
     
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -82,8 +82,8 @@ const loginUser = async (req, res) => {
       res.status(401).json({ success: false, message: "Invalid Credentials!" });
     }
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -96,8 +96,8 @@ const getProfile = async (req, res) => {
 
     res.json({ success: true, userData });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -133,8 +133,8 @@ const updateProfile = async (req, res) => {
 
     res.json({ success: true, message: "Profile Updated!" });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -195,8 +195,8 @@ const bookAppointment = async (req, res) => {
 
     res.json({ success: true, message: "Appointment Booked!" });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -208,8 +208,8 @@ const listAppointment = async (req, res) => {
 
     res.json({ success: true, appointments });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -245,8 +245,8 @@ const cancelAppointment = async (req, res) => {
 
     res.json({ success: true, message: "Appointment Cancelled!" });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 

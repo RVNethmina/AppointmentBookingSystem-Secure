@@ -4,6 +4,7 @@ import mongoSanitize from 'express-mongo-sanitize'
 import adminRouter from './routes/adminRoute.js'
 import doctorRouter from './routes/doctorRoute.js'
 import useRouter from './routes/userRoutes.js'
+import errorHandler from './middleware/errorHandler.js'
 import { createAuthLimiter, createApiLimiter, AUTH_PATHS } from './middleware/rateLimit.js'
 
 // Builds the Express application without connecting to the database or
@@ -32,6 +33,9 @@ const createApp = () => {
     app.get('/',(req,res)=>{
         res.send('API WORKING great')
     })
+
+    // must be registered after all routes
+    app.use(errorHandler)
 
     return app
 }

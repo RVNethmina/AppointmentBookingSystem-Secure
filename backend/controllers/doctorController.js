@@ -13,8 +13,8 @@ const changeAvailability = async (req, res) => {
     });
     res.json({ success: true, message: "Availability Changed" });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -24,8 +24,8 @@ const doctorList = async (req, res) => {
     const doctors = await doctorModel.find({}).select(["-password", "-email"]);
     res.json({ success: true, doctors });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -56,8 +56,8 @@ const loginDoctor = async (req, res) => {
       return res.status(401).json({ success: false, message: "Invalid Credentials!" });
     }
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -74,8 +74,8 @@ const appointmentsDoctor = async (req, res) => {
     //send this data
     res.json({ success: true, appointments });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -92,8 +92,8 @@ const appointmentComplete = async (req, res) => {
       return res.json({ success: false, message: "Mark failed!" });
     }
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -110,8 +110,8 @@ const appointmentCancel = async (req, res) => {
       return res.json({ success: false, message: "Cancellationfailed!" });
     }
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -152,8 +152,8 @@ const doctorDashboard = async (req,res) => {
     res.json({success:true,dashData})
     
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 };
 
@@ -170,8 +170,8 @@ const doctorProfile = async (req,res) => {
     res.json({success:true,profileData})
     
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
   
 }
@@ -189,8 +189,8 @@ const updateDoctorProfile = async (req,res) => {
     res.json({success:true,message:'Profile Updated!'})
     
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   }
 
 }
