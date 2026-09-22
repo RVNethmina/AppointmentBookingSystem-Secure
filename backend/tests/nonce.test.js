@@ -1,5 +1,6 @@
 import { test, describe, before, after, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
+import jwt from 'jsonwebtoken'
 import request from 'supertest'
 import googleVerifier from '../utils/google.js'
 import { startDb, stopDb, clearDb, createApp } from './helpers.js'
@@ -74,8 +75,10 @@ describe('V18: Google ID tokens bound to a single-use nonce', () => {
 
     test('a forged nonce token is rejected', async () => {
         idTokenNonce = 'attacker-nonce'
+        // signed with a key the attacker chose instead of the derived nonce key
+        const forged = jwt.sign({ nonce: 'attacker-nonce', typ: 'google-oidc-nonce' }, 'attacker-key', { jwtid: 'x', expiresIn: 600 })
         const res = await request(createApp()).post('/api/user/auth/google')
-            .send({ credential: 'id-token', nonceToken: 'eyJhbGciOiJIUzI1NiJ9.eyJub25jZSI6ImF0dGFja2VyLW5vbmNlIn0.x' })
+            .send({ credential: 'id-token', nonceToken: forged })
         assert.equal(res.status, 401)
     })
 })

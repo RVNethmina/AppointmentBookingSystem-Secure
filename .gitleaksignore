@@ -1,0 +1,4 @@
+# Reviewed false positives (commit:file:rule:line).
+# Deliberately forged, unsigned-by-us nonce token used as a negative test
+# fixture; replaced by a runtime-generated value in a later commit.
+f28f2b582b2b5acca30bc391f6e811244d1f6a05:backend/tests/nonce.test.js:jwt:78
