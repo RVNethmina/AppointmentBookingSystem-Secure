@@ -147,7 +147,7 @@ const googleLogin = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = req.auth.id;
     const userData = await userModel.findById(userId).select("-password");
 
     res.json({ success: true, userData });
@@ -161,7 +161,8 @@ const getProfile = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { userId, name, phone, address, dob, gender } = req.body;
+    const userId = req.auth.id;
+    const { name, phone, address, dob, gender } = req.body;
 
     const imageFile = req.file;
 
@@ -199,7 +200,8 @@ const updateProfile = async (req, res) => {
 const bookAppointment = async (req, res) => {
   try {
     //get data from the request
-    const { userId, docId, slotDate, slotTime } = req.body;
+    const userId = req.auth.id;
+    const { docId, slotDate, slotTime } = req.body;
 
     //find the doctor
     const docData = await doctorModel.findById(docId).select("-password");
@@ -259,7 +261,7 @@ const bookAppointment = async (req, res) => {
 //API to get user Appointments for frontend my-appointment page
 const listAppointment = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = req.auth.id;
     const appointments = await appointmentModel.find({ userId });
 
     res.json({ success: true, appointments });
@@ -272,7 +274,8 @@ const listAppointment = async (req, res) => {
 //API to cancel appointment
 const cancelAppointment = async (req, res) => {
   try {
-    const { userId, appointmentId } = req.body;
+    const userId = req.auth.id;
+    const { appointmentId } = req.body;
 
     const appointmentData = await appointmentModel.findById(appointmentId);
 

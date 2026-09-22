@@ -22,6 +22,8 @@ const authAdmin = async (req,res,next) => {
         return res.status(403).json({success:false, message:"Not Authorised, Login again!"})
     }
 
+    req.auth = { role: 'admin', email: token_decode.email }
+
     next()
 }
 

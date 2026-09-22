@@ -14,13 +14,18 @@ const assertJwtSecret = () => {
   }
 };
 
+// The only algorithm the API signs with and accepts (RFC 8725).
+const ALGORITHM = "HS256";
+
 // Every token the API issues carries an expiry.
 const signAccessToken = (payload) =>
   jwt.sign(payload, process.env.JWT_SECRET, {
+    algorithm: ALGORITHM,
     expiresIn: process.env.JWT_EXPIRES_IN || DEFAULT_EXPIRES_IN,
   });
 
-const verifyAccessToken = (token) => jwt.verify(token, process.env.JWT_SECRET);
+const verifyAccessToken = (token) =>
+  jwt.verify(token, process.env.JWT_SECRET, { algorithms: [ALGORITHM] });
 
 // Reads "Authorization: Bearer <token>" or the legacy per-role header
 // (token / atoken / dtoken) used by the clients.
