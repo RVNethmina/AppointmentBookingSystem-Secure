@@ -10,7 +10,7 @@ import {
   cancelAppointment,
 } from "../controllers/UserController.js";
 import authUser from "../middleware/authUser.js";
-import upload from "../middleware/multer.js";
+import { uploadImage } from "../middleware/multer.js";
 
 
 const useRouter = express.Router();
@@ -18,10 +18,11 @@ const useRouter = express.Router();
 useRouter.post("/register", registerUser);
 useRouter.post("/login", loginUser);
 useRouter.post("/auth/google", googleLogin);
+// authenticate first, then parse and verify the upload
 useRouter.post(
   "/update-profile",
-  upload.single("image"),
   authUser,
+  uploadImage("image"),
   updateProfile
 );
 useRouter.post("/book-appointment", authUser, bookAppointment);

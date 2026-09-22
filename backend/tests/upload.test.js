@@ -1,10 +1,12 @@
 import { test, describe, before, after, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'fs'
 import path from 'path'
 import request from 'supertest'
 import { v2 as cloudinary } from 'cloudinary'
 import { UPLOAD_DIR } from '../middleware/multer.js'
 import { signAccessToken } from '../utils/token.js'
+import userModel from '../models/userModel.js'
 import { startDb, stopDb, clearDb, createApp } from './helpers.js'
 
 // smallest valid PNG (1x1 pixel)
@@ -67,5 +69,68 @@ describe('V7: upload restrictions', () => {
         const res = await addDoctor(createApp(), big, 'big.png', 'image/png')
         assert.ok(res.status >= 400)
         assert.equal(uploadedPaths.length, 0)
+    })
+})
+
+describe('V12: upload handling order, content check and cleanup', () => {
+    let uploadedPaths
+    const originalUpload = cloudinary.uploader.upload
+    const filesOnDisk = () => fs.readdirSync(UPLOAD_DIR).length
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 100))
+
+    before(startDb)
+    after(stopDb)
+
+    beforeEach(async () => {
+        await clearDb()
+        uploadedPaths = []
+        cloudinary.uploader.upload = async (filePath) => {
+            uploadedPaths.push(filePath)
+            return { secure_url: 'https://res.cloudinary.com/demo/image/upload/x.png' }
+        }
+    })
+    afterEach(() => { cloudinary.uploader.upload = originalUpload })
+
+    const updateProfile = (app, token, file, filename, contentType) => {
+        const req = request(app).post('/api/user/update-profile')
+        if (token) req.set('token', token)
+        return req
+            .field('name', 'Pat').field('phone', '0771234567').field('dob', '2000-01-01').field('gender', 'Male')
+            .field('address', JSON.stringify({ line1: 'a', line2: 'b' }))
+            .attach('image', file, { filename, contentType })
+    }
+
+    test('an anonymous upload gets 401 and nothing is written to disk', async () => {
+        const before = filesOnDisk()
+        const res = await updateProfile(createApp(), null, PNG, 'p.png', 'image/png')
+        await settle()
+        assert.equal(res.status, 401)
+        assert.equal(filesOnDisk(), before)
+    })
+
+    test('a PHP script renamed to .png is rejected by the content check', async () => {
+        const user = await userModel.create({ name: 'Pat', email: 'pat@example.com', password: 'x' })
+        const token = signAccessToken({ id: String(user._id), role: 'user' })
+        const before = filesOnDisk()
+        const res = await updateProfile(createApp(), token, Buffer.from('<?php system($_GET[0]); ?>'), 'avatar.png', 'image/png')
+        await settle()
+        assert.equal(res.status, 400)
+        assert.equal(uploadedPaths.length, 0)
+        assert.equal(filesOnDisk(), before)
+    })
+
+    test('upload errors return 400', async () => {
+        const res = await addDoctor(createApp(), Buffer.concat([PNG, Buffer.alloc(2 * 1024 * 1024)]), 'big.png', 'image/png')
+        assert.equal(res.status, 400)
+    })
+
+    test('the temporary file is deleted after a successful upload', async () => {
+        const user = await userModel.create({ name: 'Pat', email: 'pat2@example.com', password: 'x' })
+        const token = signAccessToken({ id: String(user._id), role: 'user' })
+        const res = await updateProfile(createApp(), token, PNG, 'p.png', 'image/png')
+        await settle()
+        assert.equal(res.body.success, true)
+        assert.equal(uploadedPaths.length, 1)
+        assert.equal(fs.existsSync(uploadedPaths[0]), false)
     })
 })

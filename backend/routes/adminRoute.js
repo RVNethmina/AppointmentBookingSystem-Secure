@@ -7,14 +7,14 @@ import {
   appointmentCancel,
   adminDashboard,
 } from "../controllers/adminController.js";
-import upload from "../middleware/multer.js"; // Correct path to your multer middleware
+import { uploadImage } from "../middleware/multer.js";
 import authAdmin from "../middleware/authAdmin.js";
 import { changeAvailability } from "../controllers/doctorController.js";
 
 const adminRouter = express.Router();
 
-// Use the middleware before your controller
-adminRouter.post("/add-doctor", authAdmin, upload.single("image"), addDoctor);
+// authenticate first, then parse and verify the upload
+adminRouter.post("/add-doctor", authAdmin, uploadImage("image"), addDoctor);
 adminRouter.post("/login", loginAdmin);
 adminRouter.post("/all-doctors", authAdmin, allDoctors);
 adminRouter.post("/change-availability", authAdmin, changeAvailability);
