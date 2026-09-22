@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import request from 'supertest'
 import { v2 as cloudinary } from 'cloudinary'
 import { signAccessToken } from '../utils/token.js'
+import userModel from '../models/userModel.js'
 import { startDb, stopDb, clearDb, createApp } from './helpers.js'
 
 const PNG = Buffer.from(
@@ -53,7 +54,8 @@ describe('V8: sensitive logging and verbose errors', () => {
     })
 
     test('handler exceptions return a generic message', async () => {
-        const token = signAccessToken({ id: '507f1f77bcf86cd799439011', role: 'user' })
+        const user = await userModel.create({ name: 'Pat', email: 'pat@example.com', password: 'x' })
+        const token = signAccessToken({ id: String(user._id), role: 'user' })
         const { result } = await captureConsole(() =>
             request(createApp())
                 .post('/api/user/book-appointment')

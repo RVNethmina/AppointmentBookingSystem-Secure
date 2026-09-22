@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import request from 'supertest'
 import { signAccessToken } from '../utils/token.js'
 import appointmentModel from '../models/AppointmentModel.js'
+import userModel from '../models/userModel.js'
 import { startDb, stopDb, clearDb, createApp } from './helpers.js'
 
 const USER_ID = '507f1f77bcf86cd799439011'
@@ -27,7 +28,10 @@ const endpoints = {
 describe('V11: role enforcement and algorithm pinning', () => {
     before(startDb)
     after(stopDb)
-    beforeEach(clearDb)
+    beforeEach(async () => {
+        await clearDb()
+        await userModel.create({ _id: USER_ID, name: 'Pat', email: 'pat@example.com', password: 'x' })
+    })
 
     for (const [role, endpoint] of Object.entries(endpoints)) {
         test(`${endpoint.path} accepts only ${role} tokens`, async () => {

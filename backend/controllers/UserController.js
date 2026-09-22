@@ -7,6 +7,7 @@ import doctorModel from "../models/doctorModel.js";
 import appointmentModel from "../models/AppointmentModel.js";
 import razorpay from "razorpay";
 import googleVerifier from "../utils/google.js";
+import { verifyPassword } from "../utils/password.js";
 
 // API to register user
 const registerUser = async (req, res) => {
@@ -69,14 +70,11 @@ const loginUser = async (req, res) => {
 
     const user = await userModel.findOne({ email });
 
-    // the same answer whether or not the account exists
-    if (!user) {
-      return res.status(401).json({ success: false, message: "Invalid Credentials!" });
-    }
+    // always exactly one bcrypt comparison, so neither the answer nor the
+    // response time reveals whether the account exists
+    const isMatch = await verifyPassword(password, user && user.password);
 
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (isMatch) {
+    if (user && isMatch) {
       const token = signAccessToken({ id: user._id, role: "user" });
       res.json({ success: true, token });
     } else {
@@ -119,14 +117,21 @@ const googleLogin = async (req, res) => {
       user = await userModel.findOne({ email: payload.email });
 
       if (user) {
-        // link the Google identity to the existing account
+        // Link the Google identity to the existing account. Local sign-up
+        // never verified ownership of the address, so whoever set the
+        // password may not be its owner (account pre-hijacking): remove
+        // the password and revoke every session issued before now.
         user.googleId = payload.sub;
+        user.password = undefined;
+        user.authProvider = "google";
+        user.sessionsValidAfter = new Date(Math.floor(Date.now() / 1000) * 1000);
         await user.save();
       } else {
         const userData = {
           name: payload.name || payload.email,
           email: payload.email,
           googleId: payload.sub,
+          authProvider: "google",
         };
         if (payload.picture) {
           userData.image = payload.picture;

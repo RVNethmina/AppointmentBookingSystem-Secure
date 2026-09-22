@@ -1,6 +1,6 @@
 import doctorModel from "../models/doctorModel.js";
-import bcrypt from "bcrypt";
 import { signAccessToken } from "../utils/token.js";
+import { verifyPassword } from "../utils/password.js";
 import appointmentModel from "../models/AppointmentModel.js";
 
 const changeAvailability = async (req, res) => {
@@ -42,13 +42,10 @@ const loginDoctor = async (req, res) => {
 
     const doctor = await doctorModel.findOne({ email });
 
-    if (!doctor) {
-      return res.status(401).json({ success: false, message: "Invalid Credentials!" });
-    }
+    // always exactly one bcrypt comparison (see utils/password.js)
+    const isMatch = await verifyPassword(password, doctor && doctor.password);
 
-    const isMatch = await bcrypt.compare(password, doctor.password);
-
-    if (isMatch) {
+    if (doctor && isMatch) {
       const token = signAccessToken({ id: doctor._id, role: "doctor" });
 
       res.json({ success: true, token });
