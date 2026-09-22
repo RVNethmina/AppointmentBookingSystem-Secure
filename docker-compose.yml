@@ -1,0 +1,69 @@
+# Hardened deployment: only the two nginx containers publish ports. They serve
+# the single-page applications and proxy /api to the API, which alone can
+# reach MongoDB.
+#
+#   cp backend/.env.example backend/.env   # fill in the values
+#   echo GOOGLE_CLIENT_ID=... > .env       # optional, for Google sign-in
+#   docker compose up --build
+#
+# Patient app: http://localhost:8088   Admin/doctor panel: http://localhost:8089
+# (change with FRONTEND_PORT / ADMIN_PORT in .env; add the patient app origin
+# to the Google OAuth client's authorised JavaScript origins)
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - mongo-data:/data/db
+    networks: [backend]
+
+  backend:
+    <<: *hardening
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      UPLOAD_DIR: /app/uploads
+      # nginx overwrites X-Forwarded-For and the API has no published port
+      TRUST_PROXY: "1"
+    tmpfs:
+      - /app/uploads:uid=1000,gid=1000,mode=0700
+      - /tmp
+    depends_on: [mongo]
+    networks: [backend, frontend]
+
+  frontend:
+    <<: *hardening
+    build:
+      context: ./frontend
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    tmpfs: [/tmp]
+    ports: ["${FRONTEND_PORT:-8088}:8080"]
+    depends_on: [backend]
+    networks: [frontend]
+
+  admin:
+    <<: *hardening
+    build: ./admin
+    tmpfs: [/tmp]
+    ports: ["${ADMIN_PORT:-8089}:8080"]
+    depends_on: [backend]
+    networks: [frontend]
+
+networks:
+  # MongoDB is reachable only from the API
+  backend:
+    internal: true
+  frontend:
+
+volumes:
+  mongo-data:
