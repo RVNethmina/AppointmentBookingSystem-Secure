@@ -28,6 +28,7 @@ const createApiLimiter = () => rateLimit({
 const AUTH_PATHS = [
     '/api/user/login',
     '/api/user/register',
+    '/api/user/auth/google',
     '/api/doctor/login',
     '/api/admin/login',
 ]

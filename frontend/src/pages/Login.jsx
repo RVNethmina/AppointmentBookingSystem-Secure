@@ -3,6 +3,9 @@ import { AppContext } from '../context/AppContext'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
+import { GoogleLogin } from '@react-oauth/google'
+
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 const Login = () => {
 
@@ -51,6 +54,24 @@ const Login = () => {
     }
   }
 
+  // Google sign-in: send the ID token to the API, which verifies it and
+  // returns the application's own session token
+  const onGoogleSuccess = async (credentialResponse) => {
+    try {
+      const { data } = await axios.post(backendUrl + '/api/user/auth/google', { credential: credentialResponse.credential })
+
+      if (data.success) {
+        localStorage.setItem('token', data.token)
+        setToken(data.token)
+      }
+      else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message)
+    }
+  }
+
   //once we are logged(that means token gets updated) then we navigate to the home page 
   useEffect(()=>{
     if(token){
@@ -92,6 +113,13 @@ const Login = () => {
         <button type='submit' className="w-full py-2 text-base text-white rounded-md bg-primary">
           {state === 'Sign Up' ? "Create Account" : "Log In"}    
         </button>
+
+        {
+          googleClientId && <div className="flex flex-col items-center w-full gap-2">
+                               <p className="text-xs text-zinc-400">or</p>
+                               <GoogleLogin onSuccess={onGoogleSuccess} onError={() => toast.error('Google sign-in failed')} text={state === 'Sign Up' ? 'signup_with' : 'signin_with'} />
+                             </div>
+        }
 
         {
           state === 'Sign Up'

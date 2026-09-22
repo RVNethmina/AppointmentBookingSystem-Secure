@@ -2,6 +2,7 @@ import express from "express";
 import {
   registerUser,
   loginUser,
+  googleLogin,
   getProfile,
   updateProfile,
   bookAppointment,
@@ -16,6 +17,7 @@ const useRouter = express.Router();
 
 useRouter.post("/register", registerUser);
 useRouter.post("/login", loginUser);
+useRouter.post("/auth/google", googleLogin);
 useRouter.post(
   "/update-profile",
   upload.single("image"),

@@ -6,6 +6,7 @@ import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../models/doctorModel.js";
 import appointmentModel from "../models/AppointmentModel.js";
 import razorpay from "razorpay";
+import googleVerifier from "../utils/google.js";
 
 // API to register user
 const registerUser = async (req, res) => {
@@ -81,6 +82,61 @@ const loginUser = async (req, res) => {
     } else {
       res.status(401).json({ success: false, message: "Invalid Credentials!" });
     }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Something went wrong!" });
+  }
+};
+
+//API for Google sign-in (OpenID Connect ID token)
+const googleLogin = async (req, res) => {
+  try {
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      return res.status(503).json({ success: false, message: "Google sign-in is not configured." });
+    }
+
+    const { credential } = req.body;
+    if (typeof credential !== "string" || !credential) {
+      return res.status(400).json({ success: false, message: "Missing Details!" });
+    }
+
+    let payload;
+    try {
+      payload = await googleVerifier.verify(credential);
+    } catch (error) {
+      return res.status(401).json({ success: false, message: "Google sign-in failed." });
+    }
+
+    // only accept identities whose email address Google has verified
+    if (!payload || !payload.sub || !payload.email || payload.email_verified !== true) {
+      return res.status(401).json({ success: false, message: "Google sign-in failed." });
+    }
+
+    // find by Google subject first, then by email address
+    let user = await userModel.findOne({ googleId: payload.sub });
+
+    if (!user) {
+      user = await userModel.findOne({ email: payload.email });
+
+      if (user) {
+        // link the Google identity to the existing account
+        user.googleId = payload.sub;
+        await user.save();
+      } else {
+        const userData = {
+          name: payload.name || payload.email,
+          email: payload.email,
+          googleId: payload.sub,
+        };
+        if (payload.picture) {
+          userData.image = payload.picture;
+        }
+        user = await userModel.create(userData);
+      }
+    }
+
+    const token = signAccessToken({ id: user._id, role: "user" });
+    res.json({ success: true, token });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Something went wrong!" });
@@ -253,6 +309,7 @@ const cancelAppointment = async (req, res) => {
 export {
   registerUser,
   loginUser,
+  googleLogin,
   getProfile,
   updateProfile,
   bookAppointment,
