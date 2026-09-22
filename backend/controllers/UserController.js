@@ -12,8 +12,14 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!name || !password || !email) {
-      return res.json({ success: false, message: "Missing Details!" });
+    // only plain strings may reach the database query
+    if (
+      typeof name !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      !name || !password || !email
+    ) {
+      return res.status(400).json({ success: false, message: "Missing Details!" });
     }
 
     //validating email format
@@ -54,10 +60,17 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // only plain strings may reach the database query
+    if (typeof email !== "string" || typeof password !== "string") {
+      return res.status(400).json({ success: false, message: "Invalid Credentials!" });
+    }
+
     const user = await userModel.findOne({ email });
 
+    // the same answer whether or not the account exists
     if (!user) {
-      return res.json({ success: false, message: "User doesn't exit" });
+      return res.status(401).json({ success: false, message: "Invalid Credentials!" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -66,7 +79,7 @@ const loginUser = async (req, res) => {
       const token = signAccessToken({ id: user._id, role: "user" });
       res.json({ success: true, token });
     } else {
-      res.json({ success: false, message: "Invalid Credentials!" });
+      res.status(401).json({ success: false, message: "Invalid Credentials!" });
     }
   } catch (error) {
     console.log(error);

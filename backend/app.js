@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import mongoSanitize from 'express-mongo-sanitize'
 import adminRouter from './routes/adminRoute.js'
 import doctorRouter from './routes/doctorRoute.js'
 import useRouter from './routes/userRoutes.js'
@@ -16,6 +17,8 @@ const createApp = () => {
     //middlewares
     app.use(express.json())
     app.use(cors()) //allow frontend to connect with backend
+    // strip $-prefixed and dotted keys so request data cannot become query operators
+    app.use(mongoSanitize())
 
     // brute-force protection: limiters are created per app instance
     app.use('/api', createApiLimiter())

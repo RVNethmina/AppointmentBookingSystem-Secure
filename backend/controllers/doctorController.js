@@ -34,10 +34,16 @@ const doctorList = async (req, res) => {
 const loginDoctor = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // only plain strings may reach the database query
+    if (typeof email !== "string" || typeof password !== "string") {
+      return res.status(400).json({ success: false, message: "Invalid Credentials!" });
+    }
+
     const doctor = await doctorModel.findOne({ email });
 
     if (!doctor) {
-      return res.json({ success: false, message: "Invalid Credentials!" });
+      return res.status(401).json({ success: false, message: "Invalid Credentials!" });
     }
 
     const isMatch = await bcrypt.compare(password, doctor.password);
@@ -47,7 +53,7 @@ const loginDoctor = async (req, res) => {
 
       res.json({ success: true, token });
     } else {
-      return res.json({ success: false, message: "Invalid Credentials!" });
+      return res.status(401).json({ success: false, message: "Invalid Credentials!" });
     }
   } catch (error) {
     console.log(error);
