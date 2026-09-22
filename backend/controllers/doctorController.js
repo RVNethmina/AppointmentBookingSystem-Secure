@@ -1,7 +1,7 @@
 import doctorModel from "../models/doctorModel.js";
 import { signAccessToken } from "../utils/token.js";
 import { verifyPassword } from "../utils/password.js";
-import { isValidObjectId } from "../utils/validators.js";
+import { isValidObjectId, parseAddress, parseFees } from "../utils/validators.js";
 import { releaseSlot } from "../utils/slots.js";
 import appointmentModel from "../models/AppointmentModel.js";
 
@@ -212,7 +212,15 @@ const updateDoctorProfile = async (req,res) => {
   try {
 
     const docId = req.auth.id
-    const { fees, address, available } = req.body
+
+    // only fees, address and availability can be changed, and each is validated
+    const fees = parseFees(req.body.fees)
+    const address = parseAddress(req.body.address)
+    const { available } = req.body
+
+    if (fees === null || !address || typeof available !== 'boolean') {
+      return res.status(400).json({ success: false, message: "Invalid profile details!" })
+    }
 
     await doctorModel.findByIdAndUpdate(docId,{fees,address,available})
 

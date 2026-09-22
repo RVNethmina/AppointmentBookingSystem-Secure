@@ -5,7 +5,7 @@ import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../models/doctorModel.js";
 import crypto from "crypto";
 import { signAccessToken } from "../utils/token.js";
-import { isValidObjectId } from "../utils/validators.js";
+import { isValidObjectId, parseAddress, parseFees } from "../utils/validators.js";
 import { releaseSlot } from "../utils/slots.js";
 import appointmentModel from "../models/AppointmentModel.js";
 import userModel from "../models/userModel.js";
@@ -45,6 +45,13 @@ const addDoctor = async (req, res) => {
       return res.json({ success: false, message: "Image file is required" });
     }
 
+    // fees must be a sensible number and the address exactly two short lines
+    const parsedFees = parseFees(fees);
+    const parsedAddress = parseAddress(address);
+    if (parsedFees === null || !parsedAddress) {
+      return res.status(400).json({ success: false, message: "Invalid fees or address" });
+    }
+
     //validating email format
     if (!validator.isEmail(email)) {
       return res.json({
@@ -81,8 +88,8 @@ const addDoctor = async (req, res) => {
       degree,
       experience,
       about,
-      fees,
-      address: JSON.parse(address),
+      fees: parsedFees,
+      address: parsedAddress,
       date: Date.now(),
     };
 

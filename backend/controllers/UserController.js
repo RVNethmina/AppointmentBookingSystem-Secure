@@ -8,7 +8,16 @@ import appointmentModel from "../models/AppointmentModel.js";
 import razorpay from "razorpay";
 import googleVerifier from "../utils/google.js";
 import { verifyPassword } from "../utils/password.js";
-import { isValidObjectId, isValidSlotDate, isValidSlotTime } from "../utils/validators.js";
+import {
+  isValidObjectId,
+  isValidSlotDate,
+  isValidSlotTime,
+  parseAddress,
+  isValidName,
+  isValidPhone,
+  isValidDob,
+  isValidGender,
+} from "../utils/validators.js";
 import { releaseSlot } from "../utils/slots.js";
 
 // API to register user
@@ -169,18 +178,26 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const userId = req.auth.id;
-    const { name, phone, address, dob, gender } = req.body;
+    const { name, phone, dob, gender } = req.body;
 
     const imageFile = req.file;
 
-    if (!name || !phone || !dob || !gender) {
-      return res.json({ success: false, message: "Data Missing!" });
+    // only the listed fields are accepted, and each one is validated
+    const address = parseAddress(req.body.address);
+    if (
+      !isValidName(name) ||
+      !isValidPhone(phone) ||
+      !isValidDob(dob) ||
+      !isValidGender(gender) ||
+      !address
+    ) {
+      return res.status(400).json({ success: false, message: "Invalid profile details!" });
     }
 
     await userModel.findByIdAndUpdate(userId, {
-      name,
+      name: name.trim(),
       phone,
-      address: JSON.parse(address),
+      address,
       dob,
       gender,
     });
