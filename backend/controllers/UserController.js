@@ -8,6 +8,8 @@ import appointmentModel from "../models/AppointmentModel.js";
 import razorpay from "razorpay";
 import googleVerifier from "../utils/google.js";
 import { verifyPassword } from "../utils/password.js";
+import { isValidObjectId, isValidSlotDate, isValidSlotTime } from "../utils/validators.js";
+import { releaseSlot } from "../utils/slots.js";
 
 // API to register user
 const registerUser = async (req, res) => {
@@ -208,53 +210,54 @@ const bookAppointment = async (req, res) => {
     const userId = req.auth.id;
     const { docId, slotDate, slotTime } = req.body;
 
-    //find the doctor
-    const docData = await doctorModel.findById(docId).select("-password");
-
-    //doctor is not available sending response
-    if (!docData.available) {
-      return res.json({ success: false, message: "Doctor not Available!" });
+    if (!isValidObjectId(docId) || !isValidSlotDate(slotDate) || !isValidSlotTime(slotTime)) {
+      return res.status(400).json({ success: false, message: "Invalid booking details!" });
     }
 
-    //create copy of slots_booked data if doctor available
-    let slots_booked = docData.slots_booked;
-
-    //checking for slots availability for this date and this time
-    if (slots_booked[slotDate]) {
-      if (slots_booked[slotDate].includes(slotTime)) {
-        return res.json({ success: false, message: "Slot not Available!" });
-      } else {
-        //book that slot
-        slots_booked[slotDate].push(slotTime);
-      }
-    } else {
-      slots_booked[slotDate] = [];
-      slots_booked[slotDate].push(slotTime);
+    //getting user data (only the fields shown to doctors and the admin)
+    const userData = await userModel.findById(userId).select("name image dob");
+    if (!userData) {
+      return res.status(401).json({ success: false, message: "Not Authorised, Login again!" });
     }
 
-    //getting user data
-    const userData = await userModel.findById(userId).select("-password");
+    // Check and reserve the slot in ONE conditional update. MongoDB applies
+    // it atomically to the doctor document, so of several concurrent
+    // requests for the same slot only one can match.
+    const slotPath = `slots_booked.${slotDate}`;
+    const docData = await doctorModel.findOneAndUpdate(
+      { _id: docId, available: true, [slotPath]: { $ne: slotTime } },
+      { $push: { [slotPath]: slotTime } },
+      { projection: { name: 1, image: 1, speciality: 1, address: 1, fees: 1 } }
+    );
 
-    //deleting slots_booked data from the doctor data because we have to save this data in appintment data
-    delete docData.slots_booked;
+    if (!docData) {
+      return res.json({ success: false, message: "Slot not Available!" });
+    }
 
+    // store only the fields that are displayed
     const appointmentData = {
       userId,
       docId,
-      userData,
-      docData,
+      userData: { name: userData.name, image: userData.image, dob: userData.dob },
+      docData: {
+        name: docData.name,
+        image: docData.image,
+        speciality: docData.speciality,
+        address: docData.address,
+      },
       amount: docData.fees,
       slotTime,
       slotDate,
       date: Date.now(),
     };
 
-    //save appointment in the database
-    const newAppointment = new appointmentModel(appointmentData);
-    await newAppointment.save();
-
-    //save new slots data in doctors docData
-    await doctorModel.findByIdAndUpdate(docId, { slots_booked });
+    try {
+      await appointmentModel.create(appointmentData);
+    } catch (error) {
+      // give the slot back if the appointment could not be saved
+      await releaseSlot(docId, slotDate, slotTime);
+      throw error;
+    }
 
     res.json({ success: true, message: "Appointment Booked!" });
   } catch (error) {
@@ -282,30 +285,23 @@ const cancelAppointment = async (req, res) => {
     const userId = req.auth.id;
     const { appointmentId } = req.body;
 
-    const appointmentData = await appointmentModel.findById(appointmentId);
-
-    //verify appointment user
-    if (appointmentData.userId !== userId) {
-      return res.json({ success: false, message: "Unauthorised Action!" });
+    if (!isValidObjectId(appointmentId)) {
+      return res.status(400).json({ success: false, message: "Invalid appointment!" });
     }
 
-    //cancel appointment
-    await appointmentModel.findByIdAndUpdate(appointmentId, {
-      cancelled: true,
-    });
-
-    //releasing cancelled doctor slot
-    const { docId, slotDate, slotTime } = appointmentData;
-
-    const doctorData = await doctorModel.findById(docId);
-
-    let slots_booked = doctorData.slots_booked;
-
-    slots_booked[slotDate] = slots_booked[slotDate].filter(
-      (e) => e !== slotTime
+    // atomic transition: only the owner's active appointment can be cancelled,
+    // and only once
+    const appointmentData = await appointmentModel.findOneAndUpdate(
+      { _id: appointmentId, userId, cancelled: false, isCompleted: false },
+      { cancelled: true }
     );
 
-    await doctorModel.findByIdAndUpdate(docId, { slots_booked });
+    if (!appointmentData) {
+      return res.json({ success: false, message: "Cancellation failed!" });
+    }
+
+    //releasing cancelled doctor slot
+    await releaseSlot(appointmentData.docId, appointmentData.slotDate, appointmentData.slotTime);
 
     res.json({ success: true, message: "Appointment Cancelled!" });
   } catch (error) {

@@ -4,6 +4,7 @@ import request from 'supertest'
 import { v2 as cloudinary } from 'cloudinary'
 import { signAccessToken } from '../utils/token.js'
 import userModel from '../models/userModel.js'
+import appointmentModel from '../models/AppointmentModel.js'
 import { startDb, stopDb, clearDb, createApp } from './helpers.js'
 
 const PNG = Buffer.from(
@@ -56,14 +57,18 @@ describe('V8: sensitive logging and verbose errors', () => {
     test('handler exceptions return a generic message', async () => {
         const user = await userModel.create({ name: 'Pat', email: 'pat@example.com', password: 'x' })
         const token = signAccessToken({ id: String(user._id), role: 'user' })
-        const { result } = await captureConsole(() =>
-            request(createApp())
-                .post('/api/user/book-appointment')
-                .set('token', token)
-                .send({ docId: '507f1f77bcf86cd799439012', slotDate: '1_1_2030', slotTime: '10:00 AM' })
-        )
-        assert.equal(result.status, 500)
-        assert.equal(result.body.message, 'Something went wrong!')
+        const originalFind = appointmentModel.find
+        appointmentModel.find = () => { throw new Error('MongoNetworkError: connect ECONNREFUSED 10.0.0.5:27017') }
+        try {
+            const { result } = await captureConsole(() =>
+                request(createApp()).get('/api/user/appointments').set('token', token)
+            )
+            assert.equal(result.status, 500)
+            assert.equal(result.body.message, 'Something went wrong!')
+            assert.ok(!JSON.stringify(result.body).includes('ECONNREFUSED'))
+        } finally {
+            appointmentModel.find = originalFind
+        }
     })
 
     test('malformed JSON returns a generic 400 without a stack trace', async () => {

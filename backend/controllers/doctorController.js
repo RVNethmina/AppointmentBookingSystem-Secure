@@ -1,16 +1,25 @@
 import doctorModel from "../models/doctorModel.js";
 import { signAccessToken } from "../utils/token.js";
 import { verifyPassword } from "../utils/password.js";
+import { isValidObjectId } from "../utils/validators.js";
+import { releaseSlot } from "../utils/slots.js";
 import appointmentModel from "../models/AppointmentModel.js";
 
 const changeAvailability = async (req, res) => {
   try {
     const { docId } = req.body;
 
-    const docData = await doctorModel.findById(docId);
-    await doctorModel.findByIdAndUpdate(docId, {
-      available: !docData.available,
-    });
+    if (!isValidObjectId(docId)) {
+      return res.status(400).json({ success: false, message: "Invalid doctor!" });
+    }
+
+    // toggle in a single atomic update
+    const result = await doctorModel.updateOne({ _id: docId }, [
+      { $set: { available: { $not: "$available" } } },
+    ]);
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: "Doctor not found!" });
+    }
     res.json({ success: true, message: "Availability Changed" });
   } catch (error) {
     console.error(error);
@@ -81,14 +90,23 @@ const appointmentComplete = async (req, res) => {
   try {
     const docId = req.auth.id;
     const { appointmentId } = req.body;
-    const appointmentData = await appointmentModel.findById(appointmentId);
 
-    if (appointmentData && appointmentData.docId === docId) {
-      await appointmentModel.findByIdAndUpdate(appointmentId, {isCompleted: true});
-      return res.json({ success: true, message: "Appointment Completed!" });
-    } else {
+    if (!isValidObjectId(appointmentId)) {
+      return res.status(400).json({ success: false, message: "Invalid appointment!" });
+    }
+
+    // atomic transition with ownership in the filter: cancelled appointments
+    // cannot be completed
+    const appointmentData = await appointmentModel.findOneAndUpdate(
+      { _id: appointmentId, docId, cancelled: false, isCompleted: false },
+      { isCompleted: true }
+    );
+
+    if (!appointmentData) {
       return res.json({ success: false, message: "Mark failed!" });
     }
+
+    return res.json({ success: true, message: "Appointment Completed!" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Something went wrong!" });
@@ -100,14 +118,26 @@ const appointmentCancel = async (req, res) => {
   try {
     const docId = req.auth.id;
     const { appointmentId } = req.body;
-    const appointmentData = await appointmentModel.findById(appointmentId);
 
-    if (appointmentData && appointmentData.docId === docId) {
-      await appointmentModel.findByIdAndUpdate(appointmentId, {cancelled: true });
-      return res.json({ success: true, message: "Appointment Cancelled!" });
-    } else {
-      return res.json({ success: false, message: "Cancellationfailed!" });
+    if (!isValidObjectId(appointmentId)) {
+      return res.status(400).json({ success: false, message: "Invalid appointment!" });
     }
+
+    // atomic transition with ownership in the filter: completed appointments
+    // cannot be cancelled, and each appointment is cancelled only once
+    const appointmentData = await appointmentModel.findOneAndUpdate(
+      { _id: appointmentId, docId, cancelled: false, isCompleted: false },
+      { cancelled: true }
+    );
+
+    if (!appointmentData) {
+      return res.json({ success: false, message: "Cancellation failed!" });
+    }
+
+    // the doctor's cancellation releases the slot as well
+    await releaseSlot(docId, appointmentData.slotDate, appointmentData.slotTime);
+
+    return res.json({ success: true, message: "Appointment Cancelled!" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Something went wrong!" });

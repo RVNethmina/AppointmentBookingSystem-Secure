@@ -5,6 +5,8 @@ import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../models/doctorModel.js";
 import crypto from "crypto";
 import { signAccessToken } from "../utils/token.js";
+import { isValidObjectId } from "../utils/validators.js";
+import { releaseSlot } from "../utils/slots.js";
 import appointmentModel from "../models/AppointmentModel.js";
 import userModel from "../models/userModel.js";
 
@@ -159,25 +161,22 @@ const appointmentCancel = async (req, res) => {
   try {
     const { appointmentId } = req.body;
 
-    const appointmentData = await appointmentModel.findById(appointmentId);
+    if (!isValidObjectId(appointmentId)) {
+      return res.status(400).json({ success: false, message: "Invalid appointment!" });
+    }
 
-    //cancel appointment
-    await appointmentModel.findByIdAndUpdate(appointmentId, {
-      cancelled: true,
-    });
-
-    //releasing cancelled doctor slot
-    const { docId, slotDate, slotTime } = appointmentData;
-
-    const doctorData = await doctorModel.findById(docId);
-
-    let slots_booked = doctorData.slots_booked;
-
-    slots_booked[slotDate] = slots_booked[slotDate].filter(
-      (e) => e !== slotTime
+    // atomic transition: only active appointments, and only once
+    const appointmentData = await appointmentModel.findOneAndUpdate(
+      { _id: appointmentId, cancelled: false, isCompleted: false },
+      { cancelled: true }
     );
 
-    await doctorModel.findByIdAndUpdate(docId, { slots_booked });
+    if (!appointmentData) {
+      return res.json({ success: false, message: "Cancellation failed!" });
+    }
+
+    //releasing cancelled doctor slot
+    await releaseSlot(appointmentData.docId, appointmentData.slotDate, appointmentData.slotTime);
 
     res.json({ success: true, message: "Appointment Cancelled!" });
   } catch (error) {
