@@ -54,11 +54,34 @@ const Login = () => {
     }
   }
 
+  // Single-use nonce from the API. Google embeds it in the ID token, and the
+  // API only accepts that ID token together with this attempt's nonce token.
+  const [googleNonce, setGoogleNonce] = useState(null)
+
+  const loadGoogleNonce = async () => {
+    try {
+      const { data } = await axios.get(backendUrl + '/api/user/auth/google/nonce')
+      setGoogleNonce(data.success ? { nonce: data.nonce, nonceToken: data.nonceToken } : null)
+    } catch {
+      setGoogleNonce(null)
+    }
+  }
+
+  useEffect(()=>{
+    if (googleClientId) {
+      loadGoogleNonce()
+    }
+  },[])
+
   // Google sign-in: send the ID token to the API, which verifies it and
   // returns the application's own session token
   const onGoogleSuccess = async (credentialResponse) => {
+    const nonceToken = googleNonce && googleNonce.nonceToken
+    // every attempt uses a fresh nonce
+    setGoogleNonce(null)
+
     try {
-      const { data } = await axios.post(backendUrl + '/api/user/auth/google', { credential: credentialResponse.credential })
+      const { data } = await axios.post(backendUrl + '/api/user/auth/google', { credential: credentialResponse.credential, nonceToken })
 
       if (data.success) {
         localStorage.setItem('token', data.token)
@@ -69,6 +92,8 @@ const Login = () => {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || error.message)
+    } finally {
+      loadGoogleNonce()
     }
   }
 
@@ -115,9 +140,10 @@ const Login = () => {
         </button>
 
         {
-          googleClientId && <div className="flex flex-col items-center w-full gap-2">
+          googleClientId && googleNonce && <div className="flex flex-col items-center w-full gap-2">
                                <p className="text-xs text-zinc-400">or</p>
-                               <GoogleLogin onSuccess={onGoogleSuccess} onError={() => toast.error('Google sign-in failed')} text={state === 'Sign Up' ? 'signup_with' : 'signin_with'} />
+                               {/* the key recreates the button whenever a new nonce arrives */}
+                               <GoogleLogin key={googleNonce.nonce} nonce={googleNonce.nonce} onSuccess={onGoogleSuccess} onError={() => toast.error('Google sign-in failed')} text={state === 'Sign Up' ? 'signup_with' : 'signin_with'} />
                              </div>
         }
 

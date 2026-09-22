@@ -3,6 +3,7 @@ import {
   registerUser,
   loginUser,
   googleLogin,
+  googleNonce,
   getProfile,
   updateProfile,
   bookAppointment,
@@ -17,6 +18,7 @@ const useRouter = express.Router();
 
 useRouter.post("/register", registerUser);
 useRouter.post("/login", loginUser);
+useRouter.get("/auth/google/nonce", googleNonce);
 useRouter.post("/auth/google", googleLogin);
 // authenticate first, then parse and verify the upload
 useRouter.post(

@@ -10,6 +10,15 @@ import { startDb, stopDb, clearDb, createApp } from './helpers.js'
 const VICTIM = 'victim@gmail.com'
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
+let currentNonce
+
+// requests a nonce, makes the stubbed ID token carry it, and signs in
+const googleSignIn = async (app) => {
+    const { body } = await request(app).get('/api/user/auth/google/nonce')
+    currentNonce = body.nonce
+    return request(app).post('/api/user/auth/google').send({ credential: 'id-token', nonceToken: body.nonceToken })
+}
+
 describe('V14: account pre-hijacking and login oracles', () => {
     const originalVerify = googleVerifier.verify
 
@@ -18,7 +27,7 @@ describe('V14: account pre-hijacking and login oracles', () => {
     beforeEach(async () => {
         await clearDb()
         googleVerifier.verify = async () => ({
-            sub: '998877665544332211', email: VICTIM, email_verified: true, name: 'Victim',
+            sub: '998877665544332211', email: VICTIM, email_verified: true, name: 'Victim', nonce: currentNonce,
         })
     })
     afterEach(() => { googleVerifier.verify = originalVerify })
@@ -33,7 +42,7 @@ describe('V14: account pre-hijacking and login oracles', () => {
         await wait(1100)
 
         // the real owner signs in with Google
-        const google = await request(app).post('/api/user/auth/google').send({ credential: 'id-token' })
+        const google = await googleSignIn(app)
         assert.equal(google.body.success, true)
 
         const user = await userModel.findOne({ email: VICTIM })
@@ -53,7 +62,7 @@ describe('V14: account pre-hijacking and login oracles', () => {
 
     test('password login to a Google-only account fails cleanly with 401', async () => {
         const app = createApp()
-        await request(app).post('/api/user/auth/google').send({ credential: 'id-token' })
+        await googleSignIn(app)
         const res = await request(app).post('/api/user/login').send({ email: VICTIM, password: 'anything' })
         assert.equal(res.status, 401)
         assert.equal(res.body.message, 'Invalid Credentials!')

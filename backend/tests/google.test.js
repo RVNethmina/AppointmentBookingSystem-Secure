@@ -16,6 +16,13 @@ const claims = (overrides = {}) => ({
     ...overrides,
 })
 
+// requests a nonce, makes the stubbed ID token carry it, and signs in
+const signIn = async (app, idClaims) => {
+    const { body } = await request(app).get('/api/user/auth/google/nonce')
+    idClaims.nonce = body.nonce
+    return request(app).post('/api/user/auth/google').send({ credential: 'id-token', nonceToken: body.nonceToken })
+}
+
 describe('Google sign-in (OpenID Connect)', () => {
     const originalVerify = googleVerifier.verify
     let nextClaims
@@ -31,7 +38,7 @@ describe('Google sign-in (OpenID Connect)', () => {
 
     test('a verified Google identity creates an account and returns an app token', async () => {
         const app = createApp()
-        const res = await request(app).post('/api/user/auth/google').send({ credential: 'id-token' })
+        const res = await signIn(app, nextClaims)
         assert.equal(res.body.success, true)
         const decoded = jwt.verify(res.body.token, process.env.JWT_SECRET)
         assert.equal(decoded.role, 'user')
@@ -46,27 +53,31 @@ describe('Google sign-in (OpenID Connect)', () => {
 
     test('signing in again reuses the same account', async () => {
         const app = createApp()
-        const first = await request(app).post('/api/user/auth/google').send({ credential: 'id-token' })
-        const second = await request(app).post('/api/user/auth/google').send({ credential: 'id-token' })
+        const first = await signIn(app, nextClaims)
+        const second = await signIn(app, nextClaims)
         assert.equal(jwt.decode(first.body.token).id, jwt.decode(second.body.token).id)
         assert.equal(await userModel.countDocuments(), 1)
     })
 
     test('an ID token that fails verification is rejected', async () => {
         googleVerifier.verify = async () => { throw new Error('Wrong recipient, payload audience != requiredAudience') }
-        const res = await request(createApp()).post('/api/user/auth/google').send({ credential: 'id-token' })
+        const res = await signIn(createApp(), nextClaims)
         assert.equal(res.status, 401)
         assert.equal(res.body.token, undefined)
     })
 
     test('an unverified email address is rejected', async () => {
         nextClaims = claims({ email_verified: false })
-        const res = await request(createApp()).post('/api/user/auth/google').send({ credential: 'id-token' })
+        const res = await signIn(createApp(), nextClaims)
         assert.equal(res.status, 401)
     })
 
     test('a missing credential is rejected', async () => {
-        const res = await request(createApp()).post('/api/user/auth/google').send({})
-        assert.equal(res.status, 400)
+        const app = createApp()
+        const { body } = await request(app).get('/api/user/auth/google/nonce')
+        const noCredential = await request(app).post('/api/user/auth/google').send({ nonceToken: body.nonceToken })
+        assert.equal(noCredential.status, 400)
+        const noNonce = await request(app).post('/api/user/auth/google').send({ credential: 'id-token' })
+        assert.equal(noNonce.status, 400)
     })
 })

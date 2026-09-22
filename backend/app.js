@@ -28,7 +28,8 @@ const createApp = () => {
 
     // brute-force protection: limiters are created per app instance
     app.use('/api', createApiLimiter())
-    app.use(AUTH_PATHS, createAuthLimiter())
+    // exact POST routes, so e.g. the Google nonce endpoint is not counted
+    app.post(AUTH_PATHS, createAuthLimiter())
 
     //api endpoints
     app.use('/api/admin',adminRouter)

@@ -7,6 +7,7 @@ import doctorModel from "../models/doctorModel.js";
 import appointmentModel from "../models/AppointmentModel.js";
 import razorpay from "razorpay";
 import googleVerifier from "../utils/google.js";
+import { issueNonce, verifyNonceToken, consumeNonceToken } from "../utils/nonce.js";
 import { verifyPassword } from "../utils/password.js";
 import {
   isValidObjectId,
@@ -104,9 +105,17 @@ const googleLogin = async (req, res) => {
       return res.status(503).json({ success: false, message: "Google sign-in is not configured." });
     }
 
-    const { credential } = req.body;
-    if (typeof credential !== "string" || !credential) {
+    const { credential, nonceToken } = req.body;
+    if (typeof credential !== "string" || !credential || typeof nonceToken !== "string" || !nonceToken) {
       return res.status(400).json({ success: false, message: "Missing Details!" });
+    }
+
+    // the nonce token issued by GET /auth/google/nonce for this attempt
+    let expected;
+    try {
+      expected = verifyNonceToken(nonceToken);
+    } catch (error) {
+      return res.status(401).json({ success: false, message: "Google sign-in failed." });
     }
 
     let payload;
@@ -118,6 +127,12 @@ const googleLogin = async (req, res) => {
 
     // only accept identities whose email address Google has verified
     if (!payload || !payload.sub || !payload.email || payload.email_verified !== true) {
+      return res.status(401).json({ success: false, message: "Google sign-in failed." });
+    }
+
+    // the ID token must have been issued for this attempt's nonce, and each
+    // nonce token can be used only once, so captured tokens cannot be replayed
+    if (typeof payload.nonce !== "string" || payload.nonce !== expected.nonce || !consumeNonceToken(expected)) {
       return res.status(401).json({ success: false, message: "Google sign-in failed." });
     }
 
@@ -157,6 +172,12 @@ const googleLogin = async (req, res) => {
     console.error(error);
     res.status(500).json({ success: false, message: "Something went wrong!" });
   }
+};
+
+//API that issues a single-use nonce for Google sign-in
+const googleNonce = (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ success: true, ...issueNonce() });
 };
 
 //API to get user profile data
@@ -331,6 +352,7 @@ export {
   registerUser,
   loginUser,
   googleLogin,
+  googleNonce,
   getProfile,
   updateProfile,
   bookAppointment,
