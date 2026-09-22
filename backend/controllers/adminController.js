@@ -3,7 +3,8 @@ import validator from "validator";
 import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../models/doctorModel.js";
-import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { signAccessToken } from "../utils/token.js";
 import appointmentModel from "../models/AppointmentModel.js";
 import userModel from "../models/userModel.js";
 
@@ -99,18 +100,31 @@ const addDoctor = async (req, res) => {
 
 //api for admin login
 
+// constant-time string comparison
+const safeEqual = (a, b) => {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  if (bufA.length !== bufB.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+};
+
 const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (
-      email === process.env.ADMIN_EMAIL &&
-      password === process.env.ADMIN_PASSWORD
+      typeof email === "string" &&
+      typeof password === "string" &&
+      safeEqual(email, process.env.ADMIN_EMAIL) &&
+      safeEqual(password, process.env.ADMIN_PASSWORD)
     ) {
-      const token = jwt.sign(email + password, process.env.JWT_SECRET);
+      // the token carries a role claim and an expiry, never the password
+      const token = signAccessToken({ role: "admin", email });
       res.json({ success: true, token });
     } else {
-      res.json({ succes: false, message: "Invalid Credentials!" });
+      res.status(401).json({ success: false, message: "Invalid Credentials!" });
     }
   } catch (error) {
     console.log(error);

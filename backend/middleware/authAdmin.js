@@ -1,27 +1,28 @@
-import jwt from 'jsonwebtoken'
+import { readToken, verifyAccessToken } from '../utils/token.js'
 
 //admin authentication middleware
 
 const authAdmin = async (req,res,next) => {
-    try {
 
-        const {atoken} = req.headers
-        
-        if(!atoken){
-            return res.json({success:false, message:"Not Authorised, Login again!"})
-        }
-        const  token_decode = jwt.verify(atoken,process.env.JWT_SECRET)
+    const atoken = readToken(req, 'atoken')
 
-        if(token_decode !== process.env.ADMIN_EMAIL + process.env.ADMIN_PASSWORD){
-            return res.json({success:false, message:"Not Authorised, Login again!"})
-        }
-
-        next()
-        
-    } catch (error) {
-        console.log(error)
-        res.json({success:false,message:error.message})
+    if(!atoken){
+        return res.status(401).json({success:false, message:"Not Authorised, Login again!"})
     }
+
+    let token_decode
+    try {
+        token_decode = verifyAccessToken(atoken)
+    } catch (error) {
+        return res.status(401).json({success:false, message:"Not Authorised, Login again!"})
+    }
+
+    // authorise on the verified role claim only
+    if(!token_decode || token_decode.role !== 'admin'){
+        return res.status(403).json({success:false, message:"Not Authorised, Login again!"})
+    }
+
+    next()
 }
 
 export default authAdmin
