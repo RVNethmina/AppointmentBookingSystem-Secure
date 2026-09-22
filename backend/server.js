@@ -1,31 +1,22 @@
-import express from 'express'
-import cors from 'cors'
 import 'dotenv/config'
 import connectDB from './config/mongodb.js'
 import connectCloudinary from './config/cloudinary.js'
-import adminRouter from './routes/adminRoute.js'
-import doctorRouter from './routes/doctorRoute.js'
-import useRouter from './routes/userRoutes.js'
+import createApp from './app.js'
+import { assertJwtSecret } from './utils/token.js'
+
+// refuse to start with a missing or weak JWT secret
+try {
+    assertJwtSecret()
+} catch (error) {
+    console.error(error.message)
+    process.exit(1)
+}
 
 //app config
-const app = express()
+const app = createApp()
 const port = process.env.PORT || 4000
 connectDB()
 connectCloudinary()
-
-//middlewares
-app.use(express.json())
-app.use(cors()) //allow frontend to connect with backend
-
-//api endpoints
-app.use('/api/admin',adminRouter)
-app.use('/api/doctor',doctorRouter)
-app.use('/api/user/',useRouter)
-
-
-app.get('/',(req,res)=>{
-    res.send('API WORKING great')
-})
 
 //start express app
 app.listen(port, ()=> console.log("Server Started" , port))

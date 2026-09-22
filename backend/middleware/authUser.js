@@ -1,16 +1,17 @@
-import jwt from 'jsonwebtoken'
+import { readToken, verifyAccessToken } from '../utils/token.js'
 
 //user authentication middleware
 
 const authUser = async (req,res,next) => {
     try {
 
-        const {token} = req.headers
+        const token = readToken(req, 'token')
         
         if(!token){
-            return res.json({success:false, message:"Not Authorised, Login again!"})
+            return res.status(401).json({success:false, message:"Not Authorised, Login again!"})
         }
-        const  token_decode = jwt.verify(token,process.env.JWT_SECRET)
+        // rejects tampered, expired and wrongly signed tokens
+        const  token_decode = verifyAccessToken(token)
 
         //get user id from the token
         req.body.userId = token_decode.id
@@ -18,8 +19,7 @@ const authUser = async (req,res,next) => {
         next()
         
     } catch (error) {
-        console.log(error)
-        res.json({success:false,message:error.message})
+        return res.status(401).json({success:false, message:"Not Authorised, Login again!"})
     }
 }
 

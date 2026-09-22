@@ -1,6 +1,6 @@
 import doctorModel from "../models/doctorModel.js";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import { signAccessToken } from "../utils/token.js";
 import appointmentModel from "../models/AppointmentModel.js";
 
 const changeAvailability = async (req, res) => {
@@ -43,7 +43,7 @@ const loginDoctor = async (req, res) => {
     const isMatch = await bcrypt.compare(password, doctor.password);
 
     if (isMatch) {
-      const token = jwt.sign({ id: doctor._id }, process.env.JWT_SECRET);
+      const token = signAccessToken({ id: doctor._id, role: "doctor" });
 
       res.json({ success: true, token });
     } else {

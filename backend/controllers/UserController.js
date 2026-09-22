@@ -1,7 +1,7 @@
 import validator from "validator";
 import bcrypt from "bcrypt";
 import userModel from "../models/userModel.js";
-import jwt from "jsonwebtoken";
+import { signAccessToken } from "../utils/token.js";
 import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../models/doctorModel.js";
 import appointmentModel from "../models/AppointmentModel.js";
@@ -40,7 +40,7 @@ const registerUser = async (req, res) => {
     const user = await newUser.save();
 
     //create token for the user to login
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+    const token = signAccessToken({ id: user._id, role: "user" });
 
     res.json({ success: true, token });
     
@@ -63,7 +63,7 @@ const loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (isMatch) {
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+      const token = signAccessToken({ id: user._id, role: "user" });
       res.json({ success: true, token });
     } else {
       res.json({ success: false, message: "Invalid Credentials!" });
