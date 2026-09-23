@@ -133,6 +133,7 @@ const Login = () => {
         <div className="w-full">
           <p className="">Password</p>
           <input type="password" onChange={(e)=>setPassword(e.target.value)} value={password} className="w-full p-2 mt-1 border rounded border-zinc-300" />
+          {state === 'Sign Up' && <p className="mt-1 text-xs text-zinc-400">At least 8 characters, with uppercase and lowercase letters, a number and a symbol.</p>}
         </div>
 
         <button type='submit' className="w-full py-2 text-base text-white rounded-md bg-primary">

@@ -18,6 +18,8 @@ import {
   isValidPhone,
   isValidDob,
   isValidGender,
+  isStrongPassword,
+  PASSWORD_POLICY_MESSAGE,
 } from "../utils/validators.js";
 import { releaseSlot } from "../utils/slots.js";
 
@@ -42,8 +44,8 @@ const registerUser = async (req, res) => {
     }
 
     //validating strong password
-    if (password.length < 8) {
-      return res.json({ success: false, message: "Enter a Strong Password!" });
+    if (!isStrongPassword(password)) {
+      return res.json({ success: false, message: PASSWORD_POLICY_MESSAGE });
     }
 
     //Hasing user password

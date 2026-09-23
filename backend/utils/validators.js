@@ -91,6 +91,20 @@ const isValidDob = (value) => {
 
 const isValidGender = (value) => GENDERS.includes(value);
 
+// At least 8 characters with an uppercase letter, a lowercase letter, a
+// digit and a symbol (and a sane upper bound: bcrypt ignores bytes > 72).
+const PASSWORD_POLICY_MESSAGE =
+  "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number and a symbol.";
+
+const isStrongPassword = (value) =>
+  typeof value === "string" &&
+  value.length >= 8 &&
+  Buffer.byteLength(value, "utf8") <= 72 &&
+  /[A-Z]/.test(value) &&
+  /[a-z]/.test(value) &&
+  /[0-9]/.test(value) &&
+  /[^A-Za-z0-9]/.test(value);
+
 export {
   isValidObjectId,
   isValidSlotDate,
@@ -101,4 +115,6 @@ export {
   isValidPhone,
   isValidDob,
   isValidGender,
+  isStrongPassword,
+  PASSWORD_POLICY_MESSAGE,
 };

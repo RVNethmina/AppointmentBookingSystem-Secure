@@ -5,7 +5,13 @@ import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../models/doctorModel.js";
 import crypto from "crypto";
 import { signAccessToken } from "../utils/token.js";
-import { isValidObjectId, parseAddress, parseFees } from "../utils/validators.js";
+import {
+  isValidObjectId,
+  parseAddress,
+  parseFees,
+  isStrongPassword,
+  PASSWORD_POLICY_MESSAGE,
+} from "../utils/validators.js";
 import { releaseSlot } from "../utils/slots.js";
 import appointmentModel from "../models/AppointmentModel.js";
 import userModel from "../models/userModel.js";
@@ -61,11 +67,8 @@ const addDoctor = async (req, res) => {
     }
 
     //validate strong password
-    if (password.length < 8) {
-      return res.json({
-        success: false,
-        message: "Please enter a strong password",
-      });
+    if (!isStrongPassword(password)) {
+      return res.json({ success: false, message: PASSWORD_POLICY_MESSAGE });
     }
 
     //hashing doctor password

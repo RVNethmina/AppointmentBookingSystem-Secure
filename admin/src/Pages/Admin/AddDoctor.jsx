@@ -107,6 +107,7 @@ const AddDoctor = () => {
             <div className="flex flex-col flex-1 gap-1">
               <p className="">Doctor Password</p>
               <input onChange={(e)=> setPassword(e.target.value)} value={password} type="password" placeholder="Password" className="px-3 py-2 border rounded" />
+              <p className="text-xs text-gray-400">At least 8 characters, with uppercase and lowercase letters, a number and a symbol.</p>
             </div>
 
             <div className="">
