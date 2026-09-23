@@ -1,6 +1,7 @@
 import { createContext, useEffect, useState } from "react";
 import axios from 'axios'
 import { toast } from 'react-toastify'
+import { SESSION_REJECTED_EVENT } from '../utils/sessionInterceptor'
 
 
 export const AppContext = createContext()
@@ -63,6 +64,17 @@ const AppContextProvider = (props) => {
 
     useEffect(()=>{
         getDoctorsData()
+    },[])
+
+    // the API rejected the stored token (expired, revoked or deleted account)
+    useEffect(()=>{
+        const onSessionRejected = (event) => {
+            if (event.detail === 'token') {
+                setToken(false)
+            }
+        }
+        window.addEventListener(SESSION_REJECTED_EVENT, onSessionRejected)
+        return () => window.removeEventListener(SESSION_REJECTED_EVENT, onSessionRejected)
     },[])
     
 

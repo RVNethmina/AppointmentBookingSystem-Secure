@@ -5,6 +5,10 @@ import App from "./App.jsx";
 import { BrowserRouter } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import AppContextProvider from "./context/AppContext.jsx";
+import { installSessionInterceptor } from "./utils/sessionInterceptor.js";
+
+// clears the patient session when the API rejects its token
+installSessionInterceptor({ token: "token" });
 
 // public OAuth client ID; Google sign-in is hidden when it is not configured
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;

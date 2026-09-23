@@ -1,6 +1,7 @@
-import { createContext, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import axios from 'axios'
 import { toast } from 'react-toastify'
+import { SESSION_REJECTED_EVENT } from '../utils/sessionInterceptor'
 
 export const DoctorContext = createContext()
 
@@ -11,6 +12,17 @@ const DoctorContextProvider = (props) => {
     const [appointments,setAppointments] = useState([])
     const [dashData,setDashData] = useState(false)
     const [profileData,setProfileData] = useState(false)
+
+    // the API rejected the stored doctor token
+    useEffect(()=>{
+        const onSessionRejected = (event) => {
+            if (event.detail === 'dtoken') {
+                setDToken('')
+            }
+        }
+        window.addEventListener(SESSION_REJECTED_EVENT, onSessionRejected)
+        return () => window.removeEventListener(SESSION_REJECTED_EVENT, onSessionRejected)
+    },[])
 
     //-------------------------------------------------
 
