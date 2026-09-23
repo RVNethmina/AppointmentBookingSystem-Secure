@@ -1,10 +1,11 @@
 import express from 'express'
-import cors from 'cors'
+import helmet from 'helmet'
 import mongoSanitize from 'express-mongo-sanitize'
 import adminRouter from './routes/adminRoute.js'
 import doctorRouter from './routes/doctorRoute.js'
 import useRouter from './routes/userRoutes.js'
 import errorHandler from './middleware/errorHandler.js'
+import createCors from './middleware/cors.js'
 import { createAuthLimiter, createApiLimiter, AUTH_PATHS } from './middleware/rateLimit.js'
 
 // Builds the Express application without connecting to the database or
@@ -21,8 +22,11 @@ const createApp = () => {
     }
 
     //middlewares
+    // security headers (nosniff, frameguard, HSTS, CSP, ...) and no X-Powered-By
+    app.use(helmet())
+    // only the configured front-end origins may call the API from a browser
+    app.use(createCors())
     app.use(express.json())
-    app.use(cors()) //allow frontend to connect with backend
     // strip $-prefixed and dotted keys so request data cannot become query operators
     app.use(mongoSanitize())
 

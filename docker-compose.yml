@@ -34,6 +34,8 @@ services:
       UPLOAD_DIR: /app/uploads
       # nginx overwrites X-Forwarded-For and the API has no published port
       TRUST_PROXY: "1"
+      # browsers send Origin on POSTs even to the same origin
+      ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-8088},http://localhost:${ADMIN_PORT:-8089}
     tmpfs:
       - /app/uploads:uid=1000,gid=1000,mode=0700
       - /tmp
