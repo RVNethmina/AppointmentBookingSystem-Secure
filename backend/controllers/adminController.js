@@ -3,8 +3,8 @@ import validator from "validator";
 import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../models/doctorModel.js";
-import crypto from "crypto";
 import { signAccessToken } from "../utils/token.js";
+import { adminCredentialsMatch } from "../utils/adminCredentials.js";
 import {
   isValidObjectId,
   parseAddress,
@@ -109,16 +109,6 @@ const addDoctor = async (req, res) => {
 
 //api for admin login
 
-// constant-time string comparison
-const safeEqual = (a, b) => {
-  const bufA = Buffer.from(String(a));
-  const bufB = Buffer.from(String(b));
-  if (bufA.length !== bufB.length) {
-    return false;
-  }
-  return crypto.timingSafeEqual(bufA, bufB);
-};
-
 const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -126,8 +116,7 @@ const loginAdmin = async (req, res) => {
     if (
       typeof email === "string" &&
       typeof password === "string" &&
-      safeEqual(email, process.env.ADMIN_EMAIL) &&
-      safeEqual(password, process.env.ADMIN_PASSWORD)
+      adminCredentialsMatch(email, password)
     ) {
       // the token carries a role claim and an expiry, never the password
       const token = signAccessToken({ role: "admin", email });
